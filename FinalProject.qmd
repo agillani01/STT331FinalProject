@@ -1,6 +1,7 @@
 ---
 title: "Final Project"
 subtitle: "Part 1"
+authors: "Johnson He, Anson Yamvinij, Al Gillani, Ani Kondor "
 format: 
   html:
     self-contained: true
@@ -42,11 +43,13 @@ view(life)
 
 Data Cleaning
 ```{r}
-hapi |>
-  mutate(across(.cols=X2005:X2022, .fns = as.numeric))
-life |>
-  select(X2005:X2022) |>
-  mutate(across(.cols=everything(), .fns = as.numeric))
+hapi<-hapi |>
+  mutate(across(.cols=X2005:X2022, .fns = as.numeric)) 
+head(hapi)
+life<-life |>
+  select(country,X2005:X2022) |>
+  mutate(across(.cols=X2005:X2022, .fns = as.numeric)) 
+head(life)
   
 ```
 - All of the happiness scores and life expectancies are numbers, so we converted these values to the numeric type. 
