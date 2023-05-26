@@ -1,0 +1,33 @@
+---
+title: "Final Project"
+subtitle: "Part 1"
+format: 
+  html:
+    self-contained: true
+    code-tools: true
+    toc: true
+    number-sections: true
+editor: source
+execute: 
+  error: true
+  echo: true
+  message: false
+  warning: false
+---
+Setup
+```{r setup}
+#| include: false
+library(tidyverse)
+library(glue)
+library(english)
+
+```
+Uploading data
+```{r}
+hapi <- read.csv("hapiscore_whr.csv")
+life <- read.csv("lex.csv")
+view(hapi)
+view(life)
+```
+
+
