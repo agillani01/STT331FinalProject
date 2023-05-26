@@ -34,8 +34,7 @@ view(hapi)
 view(life)
 ```
 
-Convert all values to Numeric type
-
+Data Cleaning
 ```{r}
 hapi |>
   mutate(across(.cols=X2005:X2022, .fns = as.numeric))
@@ -44,6 +43,9 @@ life |>
   mutate(across(.cols=everything(), .fns = as.numeric)) |>
   
 ```
+- All of the happiness scores and life expectancies are numbers, so we converted these values to the numeric type. 
+- Additionally, the happiness score data set only contains data from the years 2005-2022. So, we only selected those rows from the life expectancy so that they will have an equal amount of columns and years.
+
 
 Pivot Longer
 
