@@ -20,7 +20,7 @@ execute:
 library(tidyverse)
 library(glue)
 library(english)
-
+library(broom)
 ```
 
 ## About the Data
@@ -37,6 +37,8 @@ life <- read.csv("lex.csv")
 ```
 
 ```{r}
+#colnames(hapi)[1] = "country"
+#colnames(life)[1] = "country"
 hapi<-hapi |>
   mutate(across(.cols=X2005:X2022, .fns = as.numeric)) 
 life<-life |>
@@ -66,16 +68,41 @@ data <- hapiscore %>%
 
 ## Data Visualization
 ```{r}
+#2.1
 data |>
   ggplot(aes(x=lex, y= happiness_score)) +
   geom_point() +
   labs(x = "Life Expectancy", y = '', subtitle = "Happiness Score", title = "Life Expectancy v.s Happiness Score")
 ```
+
 ```{r}
+#2.1
 data |>
   group_by(year)|>
   ggplot(aes(x=lex, y= happiness_score)) +
   geom_point() +
   facet_wrap(vars(year))
 ```
+From the individual Life Expectancy vs Happiness Score plots we see a positive correlation with no significant outliers. This is similar to the results we found in the overall Life Expectancy vs Happiness Score plot
 
+```{r}
+#2.2
+#lex is life expectancy
+newdata <- data |>
+  group_by(country) |>
+  summarize(hscore = mean(happiness_score, na.rm=TRUE), lex = mean(lex))
+SLRM <- lm(hscore ~ lex,data=newdata)
+SLRM
+summary(SLRM)
+SLRM |>
+  augment() |>
+  summarize(residResponse = var(.resid),
+            residFitted = var(.fitted),
+            residReg = var(hscore))
+#  summarize(residResponse = var(resid(SLRM)),
+#           residFitted = var(fitted.values(SLRM)),
+#            residReg = var(newdata$hscore))
+#use plot to further analyze SLRM
+plot(SLRM)
+```
+y = -20.09494 + 1.03471*x
