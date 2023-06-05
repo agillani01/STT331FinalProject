@@ -37,8 +37,8 @@ life <- read.csv("lex.csv")
 ```
 
 ```{r}
-#colnames(hapi)[1] = "country"
-#colnames(life)[1] = "country"
+colnames(hapi)[1] = "country"
+colnames(life)[1] = "country"
 hapi<-hapi |>
   mutate(across(.cols=X2005:X2022, .fns = as.numeric)) 
 life<-life |>
