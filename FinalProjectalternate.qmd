@@ -1,0 +1,138 @@
+---
+title: "Final Project"
+subtitle: "Part 1"
+authors: "Johnson He, Anson Yamvinij, Al Gillani, Ani Kondor "
+format: 
+  html:
+    self-contained: true
+    code-tools: true
+    toc: true
+editor: source
+execute: 
+  error: true
+  echo: false
+  message: false
+  warning: false
+---
+
+```{r setup}
+#| include: false
+library(tidyverse)
+library(glue)
+library(english)
+
+```
+
+## About the Data
+
+Life Expectancy Data Description: The number of years a newborn infant would live if the current mortality rates at different ages were to stay the same throughout its life. The main key is country and the life expectancy is under columns by year.
+
+Happiness Data Description: This is the national average response to the question of life evaluations asking the following “Please imagine a ladder, with steps numbered from 0 at the bottom to 10 at the top. The top of the ladder represents the best possible life for you and the bottom of the ladder represents the worst possible life for you. On which step of the ladder would you say you personally feel you stand at this time?” This measure is also referred to as Cantril life ladder. Gapminder has converted this indicator's scale from 0 to 100 to easly communicate it in terms of percentage. The main key is country and happiness score are under columns by year.
+
+## Hypothesis
+We hypothesize that Happiness score will have a direct positive correlation with Life Expectancy, i.e. For each year, the higher the life expectancy, the higher happiness score. Of course, there will be some outliers, but for the most part we think that our hypothesis will be true.
+```{r}
+hapi <- read.csv("hapiscore_whr.csv")
+life <- read.csv("lex.csv")
+```
+
+```{r}
+hapi<-hapi |>
+  mutate(across(.cols=X2005:X2022, .fns = as.numeric)) 
+life<-life |>
+  select(country,X2005:X2022) |>
+  mutate(across(.cols=X2005:X2022, .fns = as.numeric)) 
+```
+## Data Cleaning Process
+All of the happiness scores and life expectancies are numbers, so we converted these values to the numeric type. Additionally, the happiness score data set only contains data from the years 2005-2022. So, we only selected those rows from the life expectancy so that they will have an equal amount of columns and years.
+
+```{r}
+hapiscore <- hapi %>% 
+                pivot_longer(cols = -country, 
+                             names_to = "year", 
+                             values_to = "happiness_score")
+
+lex <- life %>% 
+          pivot_longer(cols = -country, 
+                       names_to = "year", 
+                       values_to = "lex")
+
+```
+
+```{r}
+data <- hapiscore %>%
+    inner_join(lex, by = c("country","year"))
+```
+
+## Data Visualization
+```{r}
+data |>
+  ggplot(aes(x=lex, y= happiness_score)) +
+  geom_point() +
+  labs(x = "Life Expectancy", y = '', subtitle = "Happiness Score", title = "Life Expectancy v.s Happiness Score")
+```
+```{r}
+data |>
+  group_by(year)|>
+  ggplot(aes(x=lex, y= happiness_score)) +
+  geom_point() +
+  facet_wrap(vars(year))
+```
+```{r}
+# Fit a linear regression model
+model <- lm(happiness_score ~ lex, data = data)
+
+# Generate predictions
+predictions <- predict(model)
+
+# Generate random errors
+set.seed(123)
+random_errors <- rnorm(nrow(data), mean = 0, sd = sigma(model))
+
+# Generate simulated observations
+simulated_data <- data.frame(
+  country = data$country,
+  year = data$year,
+  happiness_score = predictions + random_errors,
+  lex = data$lex
+)
+
+# Plotting the observed data
+p1 <- ggplot(data, aes(x = lex, y = happiness_score)) +
+  geom_point() +
+  labs(title = "Observed Data", x = "Life Expectancy", y = "Happiness Score")
+
+# Plotting the simulated data
+p2 <- ggplot(simulated_data, aes(x = lex, y = happiness_score)) +
+  geom_point() +
+  labs(title = "Simulated Data", x = "Life Expectancy", y = "Happiness Score")
+
+# Display plots side by side
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+
+# Generate 1000 simulated datasets and regress against observed dataset
+set.seed(123)
+num_simulations <- 1000
+r_squared_values <- vector("numeric", num_simulations)
+
+```
+```{r}
+for (i in 1:num_simulations) {
+  random_errors <- rnorm(nrow(data), mean = 0, sd = sigma(model))
+  simulated_observations <- data.frame(
+    happiness_score = predictions + random_errors,
+    lex = data$lex
+  )
+  
+  # Perform regression of observed ~ simulated and store R^2 value
+  simulated_model <- lm(happiness_score ~ lex, data = simulated_observations)
+  r_squared_values[i] <- summary(simulated_model)$r.squared
+}
+
+# Plot distribution of R^2 values
+ggplot() +
+  geom_histogram(aes(x = r_squared_values), bins = 30, fill = "blue", alpha = 0.7) +
+  labs(x = "R^2 values", y = "Frequency", title = "Distribution of R^2 values from simulated regressions")
+
+```
+
