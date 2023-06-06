@@ -83,7 +83,7 @@ data |>
   geom_point() +
   facet_wrap(vars(year))
 ```
-From the individual Life Expectancy vs Happiness Score plots we see a positive correlation with no significant outliers. This is similar to the results we found in the overall Life Expectancy vs Happiness Score plot
+From the individual Life Expectancy vs Happiness Score plots we see a positive, linear trend with no significant outliers. This is similar to the result we found in the overall Life Expectancy vs Happiness Score plot. 
 
 ```{r}
 #2.2
@@ -92,7 +92,6 @@ newdata <- data |>
   group_by(country) |>
   summarize(hscore = mean(happiness_score, na.rm=TRUE), lex = mean(lex))
 SLRM <- lm(hscore ~ lex,data=newdata)
-SLRM
 summary(SLRM)
 SLRM |>
   augment() |>
@@ -105,4 +104,11 @@ SLRM |>
 #use plot to further analyze SLRM
 plot(SLRM)
 ```
-y = -20.09494 + 1.03471*x
+In our plots, we use Life Expectancy score as the explanatory variable and Happiness Score as the response variable. Using a simple linear regression model we get the equation happiness_score = -20.09494 + 1.03471*lex. The intercept term (-20.09494) tells us the predicted happiness score for someone with a life expectancy score of zero. The coefficient for lex (1.03471) tells us that for every one point increase in life expectancy score, there is a predicted increase of 1.03471 in happiness score. 
+
+The variance in the fitted values of our regression model are 69.17273. Given the variance of the residual of our response variable, 43.47367, we are not concerned with our model making inaccurate predictions because the variances do not differ by much and looking at the graph we see variance matches the "band" where most values fall into. 
+The Residual vs Fitted plot does cause some concern with unequal variance, however, given the sample size we do not believe this will be a significant issue. 
+The Normal Q-Q plot also shows an approximately normal distribution for the residuals with a slight curve at the extremities meaning there are a few more extreme values than would be expected if the residuals were truly from a normal distribution. 
+The red band in Scale-Location plot is horizontal indicating homoscedasticity and there is no pattern in the residuals, indicating equal variability at all fitted values.
+In the Residuals vs Leverage plot there are no observations that fall outside of Cook's distance and therefore are not significantly influential in the regression.
+The r-squared of our model is 0.6141 meaning 61.41% of the variation in our model is explained by the life expectancy variable. For having only one parameter we feel this is a sufficient score.
