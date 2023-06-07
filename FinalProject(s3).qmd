@@ -1,6 +1,5 @@
 ---
 title: "Final Project"
-subtitle: "Part 1"
 authors: "Johnson He, Anson Yamvinij, Al Gillani, Ani Kondor "
 format: 
   html:
@@ -22,7 +21,7 @@ library(glue)
 library(english)
 library(broom)
 library(gridExtra)
-
+library(kableExtra)
 ```
 
 ## About the Data
@@ -52,7 +51,7 @@ life<-life |>
 
 ## Data Cleaning Process
 
-All of the happiness scores and life expectancies are numbers, so we converted these values to the numeric type. Additionally, the happiness score data set only contains data from the years 2005-2022. So, we only selected those rows from the life expectancy so that they will have an equal amount of columns and years.
+All of the happiness scores and life expectancies are numbers, so we converted these values to the numeric type. Additionally, the happiness score data set only contains data from the years 2005-2022. So, we only selected those rows from the life expectancy data set so that they will have an equal amount of columns and years.
 
 ```{r}
 hapiscore <- hapi %>% 
@@ -79,19 +78,22 @@ data <- hapiscore %>%
 data |>
   ggplot(aes(x=lex, y= happiness_score)) +
   geom_point() +
-  labs(x = "Life Expectancy", y = '', subtitle = "Happiness Score", title = "Life Expectancy v.s Happiness Score")
+  labs(x = "Life Expectancy", y = '', subtitle = "Happiness Score", title = "Life Expectancy v.s Happiness Score (All Years)")
 ```
 
 ```{r}
 #2.1
 data |>
+  mutate( year = str_remove(year, 'X')) |>
   group_by(year)|>
   ggplot(aes(x=lex, y= happiness_score)) +
   geom_point() +
-  facet_wrap(vars(year))
+  facet_wrap(vars(year)) +
+  labs(x = "Life Expectancy", y = '', subtitle = "Happiness Score", title = "Life Expectancy v.s Happiness Score (Sep. by Years)")
+
 ```
 
-From the individual Life Expectancy vs Happiness Score plots we see a positive, linear trend with no significant outliers. This is similar to the result we found in the overall Life Expectancy vs Happiness Score plot.
+From the individual Life Expectancy vs Happiness Score plots we see a positive, linear trend with no significant outliers. However we noticed that there is not much data from 2005. However, from 2006-2022, we see a trend that as life expectancy increases, the happiness score also increases. This is similar to the result we found in the overall Life Expectancy vs Happiness Score plot, where life expectancy and happiness score have a positive correlation.
 
 ```{r}
 #2.2
@@ -99,13 +101,21 @@ From the individual Life Expectancy vs Happiness Score plots we see a positive, 
 newdata <- data |>
   group_by(country) |>
   summarize(hscore = mean(happiness_score, na.rm=TRUE), lex = mean(lex))
+newdata |>
+  ggplot(aes(x =lex, y = hscore)) +
+  geom_jitter() + 
+  geom_smooth(method = "lm") +
+  labs(x = "Life Expectancy", y="", subtitle="Happiness Score", title="Average Life Expectancy v.s Average Happiness Score")
 SLRM <- lm(hscore ~ lex,data=newdata)
-summary(SLRM)
-SLRM |>
+vartab <- SLRM |>
   augment() |>
-  summarize(residResponse = var(.resid),
-            residFitted = var(.fitted),
-            residReg = var(hscore))
+  summarize(residResponse = format(round(var(.resid),2), nsmall = 2),
+            residFitted = format(round(var(.fitted),2), nsmall = 2),
+            residReg = format(round(var(hscore),2), nsmall = 2))
+kable(vartab, align = "ccc")|>
+  kable_styling(latex_options = "striped") |>
+  row_spec(1, bold = TRUE, color = 'steelblue') |>
+  add_header_above(c('Variance' = 3))
 #  summarize(residResponse = var(resid(SLRM)),
 #           residFitted = var(fitted.values(SLRM)),
 #            residReg = var(newdata$hscore))
@@ -113,9 +123,10 @@ SLRM |>
 plot(SLRM)
 ```
 
-In our plots, we use Life Expectancy score as the explanatory variable and Happiness Score as the response variable. Using a simple linear regression model we get the equation happiness_score = -20.09494 + 1.03471\*lex. The intercept term (-20.09494) tells us the predicted happiness score for someone with a life expectancy score of zero. The coefficient for lex (1.03471) tells us that for every one point increase in life expectancy score, there is a predicted increase of 1.03471 in happiness score.
+In our plots, we use Life Expectancy score as the explanatory variable and Happiness Score as the response variable. As in **the life expectancy score is x** and **the happiness score is y**. Using a simple linear regression model we get the equation: $$ y = -20.1 + 1.03x$$
+The intercept term (-20.1) tells us the predicted happiness score for someone with a life expectancy score of zero. The coefficient for x (1.03) tells us that for every one point increase in life expectancy score, there is a predicted increase of 1.03 in happiness score.
 
-The variance in the fitted values of our regression model are 69.17273. Given the variance of the residual of our response variable, 43.47367, we are not concerned with our model making inaccurate predictions because the variances do not differ by much and looking at the graph we see variance matches the "band" where most values fall into. The Residual vs Fitted plot does cause some concern with unequal variance, however, given the sample size we do not believe this will be a significant issue. The Normal Q-Q plot also shows an approximately normal distribution for the residuals with a slight curve at the extremities meaning there are a few more extreme values than would be expected if the residuals were truly from a normal distribution. The red band in Scale-Location plot is horizontal indicating homoscedasticity and there is no pattern in the residuals, indicating equal variability at all fitted values. In the Residuals vs Leverage plot there are no observations that fall outside of Cook's distance and therefore are not significantly influential in the regression. The r-squared of our model is 0.6141 meaning 61.41% of the variation in our model is explained by the life expectancy variable. For having only one parameter we feel this is a sufficient score.
+The variance in the fitted values of our regression model are 69.17. Given the variance of the residual of our response variable, 43.47, we are not concerned with our model making inaccurate predictions because the variances do not differ by much and looking at the graph we see variance matches the "band" where most values fall into. The Residual vs Fitted plot does cause some concern with unequal variance, however, given the sample size we do not believe this will be a significant issue. The Normal Q-Q plot also shows an approximately normal distribution for the residuals with a slight curve at the extremities meaning there are a few more extreme values than would be expected if the residuals were truly from a normal distribution. The red band in Scale-Location plot is horizontal indicating homoscedasticity and there is no pattern in the residuals, indicating equal variability at all fitted values. In the Residuals vs Leverage plot there are no observations that fall outside of Cook's distance and therefore are not significantly influential in the regression. The r-squared of our model is 0.6141 meaning 61.41% of the variation in our model is explained by the life expectancy variable. For having only one parameter we feel this is a sufficient score.
 
 ```{r}
 # 3.1 Visualizing Simulations from the Model
@@ -135,23 +146,21 @@ newdata$simulated_hscore <- newdata$predicted_hscore + rnorm(nrow(newdata), mean
 # Plot observed data
 p1 <- ggplot(newdata, aes(x=lex, y=hscore)) +
   geom_point() +
-  labs(x = "Life Expectancy", y = 'Happiness Score', title = "Observed Data")
+  labs(x = "Life Expectancy", y="",subtitle = 'Happiness Score', title = "Observed Data")
 
 # Plot simulated data
 p2 <- ggplot(newdata, aes(x=lex, y=simulated_hscore)) +
   geom_point() +
-  labs(x = "Life Expectancy", y = 'Simulated Happiness Score', title = "Simulated Data")
+  labs(x = "Life Expectancy", y = "", subtitle= 'Simulated Happiness Score', title = "Simulated Data")
 
 # Arrange the plots side by side
 grid.arrange(p1, p2, ncol=2)
-
-
 ```
 
 ```{r}
-str(newdata)
-names(newdata)
-table(duplicated(names(newdata)))
+#str(newdata)
+#names(newdata)
+#table(duplicated(names(newdata)))
 ```
 
 ```{r}
