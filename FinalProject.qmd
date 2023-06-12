@@ -22,6 +22,8 @@ library(english)
 library(broom)
 library(gridExtra)
 library(kableExtra)
+library(gganimate)
+library(plotly)
 ```
 
 ## About the Data
@@ -58,7 +60,6 @@ hapiscore <- hapi %>%
                 pivot_longer(cols = -country, 
                              names_to = "year", 
                              values_to = "happiness_score")
-
 lex <- life %>% 
           pivot_longer(cols = -country, 
                        names_to = "year", 
@@ -75,12 +76,17 @@ data <- hapiscore %>%
 
 ```{r}
 #2.1
-data |>
+p <- data |>
   ggplot(aes(x=lex, y= happiness_score)) +
   geom_point() +
   labs(x = "Life Expectancy", y = '', subtitle = "Happiness Score", title = "Life Expectancy v.s Happiness Score (All Years)")
+ggplotly(p) |>
+  layout(title = list(text = paste0('Life Expectancy v.s Happiness Score (All Years)',
+                                    '<br>',
+                                    '<sup>',
+                                     'Happiness Score','</sup>')))
 ```
-
+\
 ```{r}
 #2.1
 data |>
@@ -90,22 +96,40 @@ data |>
   geom_point() +
   facet_wrap(vars(year)) +
   labs(x = "Life Expectancy", y = '', subtitle = "Happiness Score", title = "Life Expectancy v.s Happiness Score (Sep. by Years)")
-
 ```
 
 From the individual Life Expectancy vs Happiness Score plots we see a positive, linear trend with no significant outliers. However we noticed that there is not much data from 2005. However, from 2006-2022, we see a trend that as life expectancy increases, the happiness score also increases. This is similar to the result we found in the overall Life Expectancy vs Happiness Score plot, where life expectancy and happiness score have a positive correlation.
 
+## Making a Linear Regression Model 
 ```{r}
-#2.2
-#lex is life expectancy
 newdata <- data |>
   group_by(country) |>
   summarize(hscore = mean(happiness_score, na.rm=TRUE), lex = mean(lex))
-newdata |>
+a <- newdata |>
+  ggplot(aes(x =lex, y = hscore)) +
+  geom_point()+
+  labs(x = "Life Expectancy", y="", subtitle="Happiness Score", title="Average Life Expectancy v.s Average Happiness Score")
+ggplotly(a) |>
+  layout(title = list(text = paste0('Average Life Expectancy v.s Average Happiness Score',
+                                    '<br>',
+                                    '<sup>',
+                                     'Average Happiness Score','</sup>')))
+p <- newdata %>%
   ggplot(aes(x =lex, y = hscore)) +
   geom_jitter() + 
   geom_smooth(method = "lm") +
-  labs(x = "Life Expectancy", y="", subtitle="Happiness Score", title="Average Life Expectancy v.s Average Happiness Score")
+  labs(x = "Life Expectancy", y="", subtitle="Average Happiness Score", title="Average Life Expectancy v.s Average Happiness Score")
+
+# Change to interactive
+ggplotly(p) |>
+  layout(title = list(text = paste0('Average Life Expectancy v.s Average Happiness Score',
+                                    '<br>',
+                                    '<sup>',
+                                     'Average Happiness Score','</sup>')))
+```
+
+### Table of Variances
+```{r}
 SLRM <- lm(hscore ~ lex,data=newdata)
 vartab <- SLRM |>
   augment() |>
@@ -113,21 +137,24 @@ vartab <- SLRM |>
             residFitted = format(round(var(.fitted),2), nsmall = 2),
             residReg = format(round(var(hscore),2), nsmall = 2))
 kable(vartab, align = "ccc")|>
-  kable_styling(latex_options = "striped") |>
+  kable_styling(bootstrap_options = c("striped", "hover")) |>
   row_spec(1, bold = TRUE, color = 'steelblue') |>
-  add_header_above(c('Variance' = 3))
-#  summarize(residResponse = var(resid(SLRM)),
-#           residFitted = var(fitted.values(SLRM)),
-#            residReg = var(newdata$hscore))
+  add_header_above(c('Variance' = 3)) |>
+  row_spec(0:1, extra_css = "border: 1px solid black;")
+```
+
+### More Residual Data
+```{r}
 #use plot to further analyze SLRM
 plot(SLRM)
 ```
 
-In our plots, we use Life Expectancy score as the explanatory variable and Happiness Score as the response variable. As in **the life expectancy score is x** and **the happiness score is y**. Using a simple linear regression model we get the equation: $$ y = -20.1 + 1.03x$$
-The intercept term (-20.1) tells us the predicted happiness score for someone with a life expectancy score of zero. The coefficient for x (1.03) tells us that for every one point increase in life expectancy score, there is a predicted increase of 1.03 in happiness score.
+## Assessing Our Linear Regression Model
+In our plots, we use Life Expectancy score as the explanatory variable and Happiness Score as the response variable. As in **the life expectancy score is x** and **the happiness score is y**. Using a simple linear regression model we get the equation: $$ y = -20.1 + 1.03x$$ The intercept term (-20.1) tells us the predicted happiness score for someone with a life expectancy score of zero. The coefficient for x (1.03) tells us that for every one point increase in life expectancy score, there is a predicted increase of 1.03 in happiness score.
 
 The variance in the fitted values of our regression model are 69.17. Given the variance of the residual of our response variable, 43.47, we are not concerned with our model making inaccurate predictions because the variances do not differ by much and looking at the graph we see variance matches the "band" where most values fall into. The Residual vs Fitted plot does cause some concern with unequal variance, however, given the sample size we do not believe this will be a significant issue. The Normal Q-Q plot also shows an approximately normal distribution for the residuals with a slight curve at the extremities meaning there are a few more extreme values than would be expected if the residuals were truly from a normal distribution. The red band in Scale-Location plot is horizontal indicating homoscedasticity and there is no pattern in the residuals, indicating equal variability at all fitted values. In the Residuals vs Leverage plot there are no observations that fall outside of Cook's distance and therefore are not significantly influential in the regression. The r-squared of our model is 0.6141 meaning 61.41% of the variation in our model is explained by the life expectancy variable. For having only one parameter we feel this is a sufficient score.
 
+## Visualizing Simulations From Our Model
 ```{r}
 # 3.1 Visualizing Simulations from the Model
 # Remove duplicate columns
@@ -157,12 +184,7 @@ p2 <- ggplot(newdata, aes(x=lex, y=simulated_hscore)) +
 grid.arrange(p1, p2, ncol=2)
 ```
 
-```{r}
-#str(newdata)
-#names(newdata)
-#table(duplicated(names(newdata)))
-```
-
+## Generating Predictive Checks
 ```{r}
 set.seed(123) # for reproducibility
 
@@ -180,7 +202,22 @@ for(i in 1:1000){
   # Store the R2 value
   r2_values[i] <- summary(model)$r.squared
 }
+```
 
-# Plot the distribution of the R2 values
-hist(r2_values, main="Distribution of R2 values", xlab="R2 values")
+```{r}
+# Create a data frame with the R2 values
+df_r2 <- data.frame(r2_values = r2_values)
+
+# Create the histogram with ggplot2
+p <- ggplot(df_r2, aes(x = r2_values)) +
+  geom_histogram(binwidth = 0.01, fill = 'lightblue', color = 'black') +
+  labs(x = "R2 values", title = "Distribution of R2 values", y = '', subtitle="Frequency")
+
+# Convert to a plotly object
+ggplotly(p) |>
+  layout(title = list(text = paste0('Distribution of R2 values',
+                                    '<br>',
+                                    '<sup>',
+                                     'Frequency','</sup>')))
+
 ```
