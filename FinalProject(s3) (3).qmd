@@ -26,6 +26,7 @@ install.packages("gganimate")
 library(gganimate)
 install.packages("plotly")
 library(plotly)
+library(shiny)
 ```
 
 ## About the Data
@@ -110,15 +111,33 @@ data |>
 ```
 
 ```{r}
-# Create an interactive scatter plot of life expectancy vs happiness score for a specific year
-data_specific_year <- data %>% filter(year == "X2022")  # change to the year you're interested in
+ui <- fluidPage(
+  titlePanel("Interactive Plot: Life Expectancy vs Happiness Score"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(inputId = "year",
+                  label = "Choose a year:",
+                  choices = unique(as.character(data$year)),
+                  selected = "X2022")
+    ),
+    mainPanel(
+      plotlyOutput(outputId = "scatterplot")
+    )
+  )
+)
+server <- function(input, output) {
+  output$scatterplot <- renderPlotly({
+    data_specific_year <- data %>% filter(year == input$year)
+    p <- data_specific_year %>%
+      plot_ly(x = ~lex, y = ~happiness_score, type = 'scatter', mode = 'markers') %>%
+      layout(title = paste("Interactive Plot: Life Expectancy vs Happiness Score for", input$year),
+             xaxis = list(title = "Life Expectancy"),
+             yaxis = list(title = "Happiness Score"))
+    p
+  })
+}
 
-p <- data_specific_year %>% 
-  plot_ly(x = ~lex, y = ~happiness_score, type = 'scatter', mode = 'markers') %>%
-  layout(title = "Interactive Plot: Life Expectancy vs Happiness Score",
-         xaxis = list(title = "Life Expectancy"),
-         yaxis = list(title = "Happiness Score"))
-p
+shinyApp(ui = ui, server = server)
 ```
 
 ```{r}
