@@ -1,0 +1,250 @@
+---
+title: "Final Project"
+authors: "Johnson He, Anson Yamvinij, Al Gillani, Ani Kondor "
+format: 
+  html:
+    self-contained: true
+    code-tools: true
+    toc: true
+editor: source
+execute: 
+  error: true
+  echo: false
+  message: false
+  warning: false
+---
+
+```{r setup}
+#| include: false
+library(tidyverse)
+library(glue)
+library(english)
+library(broom)
+library(gridExtra)
+library(kableExtra)
+install.packages("gganimate")
+library(gganimate)
+install.packages("plotly")
+library(plotly)
+```
+
+## About the Data
+
+Life Expectancy Data Description: The number of years a newborn infant would live if the current mortality rates at different ages were to stay the same throughout its life. The main key is country and the life expectancy is under columns by year.
+
+Happiness Data Description: This is the national average response to the question of life evaluations asking the following "Please imagine a ladder, with steps numbered from 0 at the bottom to 10 at the top. The top of the ladder represents the best possible life for you and the bottom of the ladder represents the worst possible life for you. On which step of the ladder would you say you personally feel you stand at this time?" This measure is also referred to as Cantril life ladder. Gapminder has converted this indicator's scale from 0 to 100 to easly communicate it in terms of percentage. The main key is country and happiness score are under columns by year.
+
+## Hypothesis
+
+We hypothesize that Happiness score will have a direct positive correlation with Life Expectancy, i.e. For each year, the higher the life expectancy, the higher happiness score. Of course, there will be some outliers, but for the most part we think that our hypothesis will be true.
+
+```{r}
+hapi <- read.csv("hapiscore_whr.csv")
+life <- read.csv("lex.csv")
+```
+
+```{r}
+colnames(hapi)[1] = "country"
+colnames(life)[1] = "country"
+hapi<-hapi |>
+  mutate(across(.cols=X2005:X2022, .fns = as.numeric)) 
+life<-life |>
+  select(country,X2005:X2022) |>
+  mutate(across(.cols=X2005:X2022, .fns = as.numeric)) 
+```
+
+## Data Cleaning Process
+
+All of the happiness scores and life expectancies are numbers, so we converted these values to the numeric type. Additionally, the happiness score data set only contains data from the years 2005-2022. So, we only selected those rows from the life expectancy data set so that they will have an equal amount of columns and years.
+
+```{r}
+hapiscore <- hapi %>% 
+                pivot_longer(cols = -country, 
+                             names_to = "year", 
+                             values_to = "happiness_score")
+
+lex <- life %>% 
+          pivot_longer(cols = -country, 
+                       names_to = "year", 
+                       values_to = "lex")
+
+```
+
+```{r}
+data <- hapiscore %>%
+    inner_join(lex, by = c("country","year"))
+```
+
+## Data Visualization
+
+```{r}
+#2.1
+data |>
+  ggplot(aes(x=lex, y= happiness_score)) +
+  geom_point() +
+  labs(x = "Life Expectancy", y = '', subtitle = "Happiness Score", title = "Life Expectancy v.s Happiness Score (All Years)")
+```
+
+```{r}
+p <- data %>%
+  ggplot(aes(x =lex, y = happiness_score)) +
+  geom_jitter() + 
+  geom_smooth(method = "lm") +
+  labs(x = "Life Expectancy", y="", subtitle="Happiness Score", title="Average Life Expectancy v.s Average Happiness Score")
+
+# Change to interactive
+ggplotly(p)
+
+```
+
+```{r}
+#2.1
+data |>
+  mutate( year = str_remove(year, 'X')) |>
+  group_by(year)|>
+  ggplot(aes(x=lex, y= happiness_score)) +
+  geom_point() +
+  facet_wrap(vars(year)) +
+  labs(x = "Life Expectancy", y = '', subtitle = "Happiness Score", title = "Life Expectancy v.s Happiness Score (Sep. by Years)")
+
+```
+
+```{r}
+# Create an interactive scatter plot of life expectancy vs happiness score for a specific year
+data_specific_year <- data %>% filter(year == "X2022")  # change to the year you're interested in
+
+p <- data_specific_year %>% 
+  plot_ly(x = ~lex, y = ~happiness_score, type = 'scatter', mode = 'markers') %>%
+  layout(title = "Interactive Plot: Life Expectancy vs Happiness Score",
+         xaxis = list(title = "Life Expectancy"),
+         yaxis = list(title = "Happiness Score"))
+p
+```
+
+```{r}
+
+
+```
+
+From the individual Life Expectancy vs Happiness Score plots we see a positive, linear trend with no significant outliers. However we noticed that there is not much data from 2005. However, from 2006-2022, we see a trend that as life expectancy increases, the happiness score also increases. This is similar to the result we found in the overall Life Expectancy vs Happiness Score plot, where life expectancy and happiness score have a positive correlation.
+
+```{r}
+#2.2
+#lex is life expectancy
+newdata <- data |>
+  group_by(country) |>
+  summarize(hscore = mean(happiness_score, na.rm=TRUE), lex = mean(lex))
+newdata |>
+  ggplot(aes(x =lex, y = hscore)) +
+  geom_jitter() + 
+  geom_smooth(method = "lm") +
+  labs(x = "Life Expectancy", y="", subtitle="Happiness Score", title="Average Life Expectancy v.s Average Happiness Score")
+SLRM <- lm(hscore ~ lex,data=newdata)
+vartab <- SLRM |>
+  augment() |>
+  summarize(residResponse = format(round(var(.resid),2), nsmall = 2),
+            residFitted = format(round(var(.fitted),2), nsmall = 2),
+            residReg = format(round(var(hscore),2), nsmall = 2))
+kable(vartab, align = "ccc")|>
+  kable_styling(latex_options = "striped") |>
+  row_spec(1, bold = TRUE, color = 'steelblue') |>
+  add_header_above(c('Variance' = 3))
+#  summarize(residResponse = var(resid(SLRM)),
+#           residFitted = var(fitted.values(SLRM)),
+#            residReg = var(newdata$hscore))
+#use plot to further analyze SLRM
+plot(SLRM)
+```
+
+In our plots, we use Life Expectancy score as the explanatory variable and Happiness Score as the response variable. As in **the life expectancy score is x** and **the happiness score is y**. Using a simple linear regression model we get the equation: $$ y = -20.1 + 1.03x$$ The intercept term (-20.1) tells us the predicted happiness score for someone with a life expectancy score of zero. The coefficient for x (1.03) tells us that for every one point increase in life expectancy score, there is a predicted increase of 1.03 in happiness score.
+
+The variance in the fitted values of our regression model are 69.17. Given the variance of the residual of our response variable, 43.47, we are not concerned with our model making inaccurate predictions because the variances do not differ by much and looking at the graph we see variance matches the "band" where most values fall into. The Residual vs Fitted plot does cause some concern with unequal variance, however, given the sample size we do not believe this will be a significant issue. The Normal Q-Q plot also shows an approximately normal distribution for the residuals with a slight curve at the extremities meaning there are a few more extreme values than would be expected if the residuals were truly from a normal distribution. The red band in Scale-Location plot is horizontal indicating homoscedasticity and there is no pattern in the residuals, indicating equal variability at all fitted values. In the Residuals vs Leverage plot there are no observations that fall outside of Cook's distance and therefore are not significantly influential in the regression. The r-squared of our model is 0.6141 meaning 61.41% of the variation in our model is explained by the life expectancy variable. For having only one parameter we feel this is a sufficient score.
+
+```{r}
+# 3.1 Visualizing Simulations from the Model
+# Remove duplicate columns
+newdata <- newdata[!duplicated(names(newdata))]
+
+
+set.seed(123) # for reproducibility
+
+# Generate predictions
+newdata$predicted_hscore <- predict(SLRM, newdata)
+
+# Add random errors to the predictions
+newdata$resid <- residuals(SLRM)
+newdata$simulated_hscore <- newdata$predicted_hscore + rnorm(nrow(newdata), mean=0, sd=sigma(SLRM))
+
+# Plot observed data
+p1 <- ggplot(newdata, aes(x=lex, y=hscore)) +
+  geom_point() +
+  labs(x = "Life Expectancy", y="",subtitle = 'Happiness Score', title = "Observed Data")
+
+# Plot simulated data
+p2 <- ggplot(newdata, aes(x=lex, y=simulated_hscore)) +
+  geom_point() +
+  labs(x = "Life Expectancy", y = "", subtitle= 'Simulated Happiness Score', title = "Simulated Data")
+
+# Arrange the plots side by side
+grid.arrange(p1, p2, ncol=2)
+```
+
+```{r}
+#str(newdata)
+#names(newdata)
+#table(duplicated(names(newdata)))
+```
+
+```{r}
+# Observed Data
+p1 <- ggplot(newdata, aes(x=lex, y=hscore)) +
+  geom_point() +
+  labs(x = "Life Expectancy", y="",subtitle = 'Happiness Score', title = "Observed Data")
+
+# Simulated Data
+p2 <- ggplot(newdata, aes(x=lex, y=simulated_hscore)) +
+  geom_point() +
+  labs(x = "Life Expectancy", y = "", subtitle= 'Simulated Happiness Score', title = "Simulated Data")
+
+# Change to interactive
+ggplotly(p1)
+ggplotly(p2)
+
+```
+
+```{r}
+set.seed(123) # for reproducibility
+
+# Initialize a vector to store R2 values
+r2_values <- vector()
+
+# Generate 1000 simulated datasets
+for(i in 1:1000){
+  # Simulate happiness scores
+  simulated_hscore <- newdata$predicted_hscore + rnorm(nrow(newdata), mean=0, sd=sigma(SLRM))
+  
+  # Fit a linear regression model
+  model <- lm(newdata$hscore ~ simulated_hscore)
+  
+  # Store the R2 value
+  r2_values[i] <- summary(model)$r.squared
+}
+
+# Plot the distribution of the R2 values
+hist(r2_values, main="Distribution of R2 values", xlab="R2 values")
+```
+
+```{r}
+# Create a data frame with the R2 values
+df_r2 <- data.frame(r2_values = r2_values)
+
+# Create the histogram with ggplot2
+p <- ggplot(df_r2, aes(x = r2_values)) +
+  geom_histogram(binwidth = 0.01, fill = 'lightblue', color = 'black') +
+  labs(x = "R2 values", title = "Distribution of R2 values")
+
+# Convert to a plotly object
+ggplotly(p)
+
+
+```
