@@ -30,7 +30,7 @@ library(plotly)
 
 Life Expectancy Data Description: The number of years a newborn infant would live if the current mortality rates at different ages were to stay the same throughout its life. The main key is country and the life expectancy is under columns by year.
 
-Happiness Data Description: This is the national average response to the question of life evaluations asking the following "Please imagine a ladder, with steps numbered from 0 at the bottom to 10 at the top. The top of the ladder represents the best possible life for you and the bottom of the ladder represents the worst possible life for you. On which step of the ladder would you say you personally feel you stand at this time?" This measure is also referred to as Cantril life ladder. Gapminder has converted this indicator's scale from 0 to 100 to easly communicate it in terms of percentage. The main key is country and happiness score are under columns by year.
+Happiness Data Description: This is the national average response to the question of life evaluations asking the following "Please imagine a ladder, with steps numbered from 0 at the bottom to 10 at the top. The top of the ladder represents the best possible life for you and the bottom of the ladder represents the worst possible life for you. On which step of the ladder would you say you personally feel you stand at this time?" This measure is also referred to as Cantril life ladder. Gapminder has converted this indicator's scale from 0 to 100 to easily communicate it in terms of percentage. The main key is country and happiness score are under columns by year.
 
 ## Hypothesis
 
@@ -98,7 +98,7 @@ data |>
   labs(x = "Life Expectancy", y = '', subtitle = "Happiness Score", title = "Life Expectancy v.s Happiness Score (Sep. by Years)")
 ```
 
-From the individual Life Expectancy vs Happiness Score plots we see a positive, linear trend with no significant outliers. However we noticed that there is not much data from 2005. However, from 2006-2022, we see a trend that as life expectancy increases, the happiness score also increases. This is similar to the result we found in the overall Life Expectancy vs Happiness Score plot, where life expectancy and happiness score have a positive correlation.
+From the individual Life Expectancy vs Happiness Score plots we see a positive, linear trend with no significant outliers. However, we noticed that there is not much data from 2005. From 2006-2022, we see a positive correlation between life expectancy and happiness score. This is similar to the result we found in the overall Life Expectancy vs Happiness Score plot, where life expectancy and happiness score also have a strong, positive correlation.
 
 ## Making a Linear Regression Model 
 ```{r}
@@ -152,7 +152,7 @@ plot(SLRM)
 ## Assessing Our Linear Regression Model
 In our plots, we use Life Expectancy score as the explanatory variable and Happiness Score as the response variable. As in **the life expectancy score is x** and **the happiness score is y**. Using a simple linear regression model we get the equation: $$ y = -20.1 + 1.03x$$ The intercept term (-20.1) tells us the predicted happiness score for someone with a life expectancy score of zero. The coefficient for x (1.03) tells us that for every one point increase in life expectancy score, there is a predicted increase of 1.03 in happiness score.
 
-The variance in the fitted values of our regression model are 69.17. Given the variance of the residual of our response variable, 43.47, we are not concerned with our model making inaccurate predictions because the variances do not differ by much and looking at the graph we see variance matches the "band" where most values fall into. The Residual vs Fitted plot does cause some concern with unequal variance, however, given the sample size we do not believe this will be a significant issue. The Normal Q-Q plot also shows an approximately normal distribution for the residuals with a slight curve at the extremities meaning there are a few more extreme values than would be expected if the residuals were truly from a normal distribution. The red band in Scale-Location plot is horizontal indicating homoscedasticity and there is no pattern in the residuals, indicating equal variability at all fitted values. In the Residuals vs Leverage plot there are no observations that fall outside of Cook's distance and therefore are not significantly influential in the regression. The r-squared of our model is 0.6141 meaning 61.41% of the variation in our model is explained by the life expectancy variable. For having only one parameter we feel this is a sufficient score.
+The variance in the fitted values of our regression model is 69.17. Given the variance of the residual of our response variable, 43.47, we are not concerned with our model making inaccurate predictions because the variances do not differ by much and looking at the graph we see variance matches the "band" where most values fall into. The Residual vs Fitted plot does cause some concern with unequal variance, however, given the sample size and law of large numbers we do not believe this will be a significant issue. The Normal Q-Q plot also shows an approximately normal distribution for the residuals with a slight curve at the extremities meaning there are a few more extreme values than would be expected if the residuals were truly from a normal distribution. The red band in Scale-Location plot is horizontal, indicating homoscedasticity and there is no noticeable pattern in the residuals, indicating equal variability at all fitted values. In the Residuals vs Leverage plot there are no observations that fall outside of Cook's distance and therefore are not significantly influential in the regression. The r-squared of our model is 0.6141 meaning 61.41% of the variation in our model is explained by the life expectancy variable. For having only one parameter we feel this is a sufficient score.
 
 ## Visualizing Simulations From Our Model
 ```{r}
@@ -201,12 +201,23 @@ for(i in 1:1000){
   
   # Store the R2 value
   r2_values[i] <- summary(model)$r.squared
+  
+  #compare SLRM and simulated data with summary statistics
+  summary(model)
+  summary(SLRM)
 }
 ```
+From a visual perspective, we see that the observed and simulated data are very similar with the primary difference being the increasing variance in the simulated data as the life expectancy score increases. This is expected since observations that are "further out" are harder to predict and this is compensated for with a wider confidence interval and greater variance. 
+Both the observed and simulated models have similar coefficients, however, the intercept is -20.09494 for the observed model and 20.00921 for the simulated model. We are not greatly concerned with this difference because the plots have a similar scale and do not differ greatly.
+Both models are highly significant with p-value <.001, but the simulated model has a lower r-squared value at only 0.3966 compared to 0.6141. This tells us that the simulated model is not very accurate in predicting happiness score given simulated data but this is to be expected and would only be an issue if the simulated model was close to or better at predicting happiness score than the observed model. 
+The residuals for both models are close to similar, but the simulated model has a much higher Max residual because of the increasing variance.
 
 ```{r}
 # Create a data frame with the R2 values
 df_r2 <- data.frame(r2_values = r2_values)
+
+#Summary of distribution
+summary(r2_values)
 
 # Create the histogram with ggplot2
 p <- ggplot(df_r2, aes(x = r2_values)) +
@@ -221,3 +232,5 @@ ggplotly(p) |>
                                      'Frequency','</sup>')))
 
 ```
+Based on the distribution of r-squared values, we can say with some confidence that our model does a good job of generating data that is similar to what was observed. The distribution is approximately normally distributed without many significant outliers. With a mean r-squared value of 0.3767 our model explains, on average, 37.67% of the variability in happiness score using life expectancy score as the explanatory variable. The dispersion of r-squared values is relatively tight with the first and third quartiles being 0.3465 and 0.4062. 
+Given the above, we have shown that our simple linear regression model has consistent performance across different simulated data samples and is reliable.
